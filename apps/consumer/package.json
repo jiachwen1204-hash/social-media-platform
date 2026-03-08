@@ -2,10 +2,11 @@
   "name": "consumer",
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "next build",
     "start": "next start"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.0.2",
     "@prisma/client": "^5.22.0",
     "next": "^14.0.0",
     "react": "^18.2.0",

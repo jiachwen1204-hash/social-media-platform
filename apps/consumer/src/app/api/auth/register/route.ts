@@ -1,33 +1,40 @@
+import { neon } from '@neondatabase/serverless';
 import { NextRequest, NextResponse } from 'next/server';
 
-// Shared in-memory storage
-const users = globalThis as any;
-if (!users._demoUsers) users._demoUsers = new Map();
-if (!users._demoPosts) users._demoPosts = [];
-let userIdCounter = users._demoUserIdCounter || 1;
-let postIdCounter = users._demoPostIdCounter || 1;
+const sql = neon(process.env.DATABASE_URL!);
+
+function generateId() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
 
 export async function POST(request: NextRequest) {
   try {
     const { email, username, displayName, password } = await request.json();
     
     // Check existing
-    const existingEmail = [...users._demoUsers.values()].find((u: any) => u.email === email);
-    const existingUser = [...users._demoUsers.values()].find((u: any) => u.username === username);
-    if (existingEmail || existingUser) {
+    const existing = await sql`SELECT id FROM users WHERE email = ${email} OR username = ${username}`;
+    if (existing.length > 0) {
       return NextResponse.json({ message: 'User already exists' }, { status: 400 });
     }
     
-    const user = { id: String(userIdCounter++), email, username, displayName, password };
-    users._demoUsers.set(user.id, user);
+    const id = generateId();
+    const passwordHash = Buffer.from(password).toString('base64');
+    await sql`
+      INSERT INTO users(id, email, username, "displayName", "passwordHash") 
+      VALUES(${id}, ${email}, ${username}, ${displayName}, ${passwordHash})
+    `;
     
-    const token = Buffer.from(JSON.stringify({ userId: user.id })).toString('base64');
-    users._demoUserIdCounter = userIdCounter;
+    const token = Buffer.from(JSON.stringify({ userId: id })).toString('base64');
     return NextResponse.json({ 
-      user: { id: user.id, email, username, displayName },
+      user: { id, email, username, displayName },
       token 
     }, { status: 201 });
-  } catch (error) {
-    return NextResponse.json({ message: 'Error' }, { status: 500 });
+  } catch (error: any) {
+    console.error('Error:', error);
+    return NextResponse.json({ message: error.message || 'Error' }, { status: 500 });
   }
 }

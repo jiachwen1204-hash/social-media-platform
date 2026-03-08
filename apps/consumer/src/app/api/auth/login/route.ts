@@ -1,17 +1,19 @@
+import { neon } from '@neondatabase/serverless';
 import { NextRequest, NextResponse } from 'next/server';
 
-const users = globalThis as any;
-if (!users._demoUsers) users._demoUsers = new Map();
-if (!users._demoPosts) users._demoPosts = [];
-let userIdCounter = users._demoUserIdCounter || 1;
-let postIdCounter = users._demoPostIdCounter || 1;
+const sql = neon(process.env.DATABASE_URL!);
 
 export async function POST(request: NextRequest) {
   try {
     const { email, password } = await request.json();
     
-    const user = [...users._demoUsers.values()].find((u: any) => u.email === email);
-    if (!user || user.password !== password) {
+    const result = await sql`SELECT id, email, username, "displayName", "passwordHash" FROM users WHERE email = ${email}`;
+    if (result.length === 0) {
+      return NextResponse.json({ message: 'Invalid credentials' }, { status: 401 });
+    }
+    
+    const user = result[0];
+    if (Buffer.from(user.passwordHash, 'base64').toString() !== password) {
       return NextResponse.json({ message: 'Invalid credentials' }, { status: 401 });
     }
 
@@ -20,7 +22,8 @@ export async function POST(request: NextRequest) {
       user: { id: user.id, email: user.email, username: user.username, displayName: user.displayName },
       token 
     });
-  } catch (error) {
-    return NextResponse.json({ message: 'Error' }, { status: 500 });
+  } catch (error: any) {
+    console.error('Error:', error);
+    return NextResponse.json({ message: error.message || 'Error' }, { status: 500 });
   }
 }
