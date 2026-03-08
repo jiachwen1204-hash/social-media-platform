@@ -1,30 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// Shared in-memory storage
+const users = globalThis as any;
+if (!users._demoUsers) users._demoUsers = new Map();
+if (!users._demoPosts) users._demoPosts = [];
+let userIdCounter = users._demoUserIdCounter || 1;
+let postIdCounter = users._demoPostIdCounter || 1;
+
 export async function GET() {
-  try {
-    const { PrismaClient } = await import('@prisma/client');
-    const prisma = new PrismaClient();
-    
-    const posts = await prisma.post.findMany({
-      where: { published: true },
-      orderBy: { createdAt: 'desc' },
-      take: 20,
-      include: {
-        user: { select: { id: true, username: true, displayName: true } },
-      },
-    });
-    return NextResponse.json(posts);
-  } catch (error: any) {
-    console.error('Error:', error);
-    return NextResponse.json({ message: error.message || 'Error' }, { status: 500 });
-  }
+  return NextResponse.json(users._demoPosts);
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { PrismaClient } = await import('@prisma/client');
-    const prisma = new PrismaClient();
-    
     const authHeader = request.headers.get('authorization');
     if (!authHeader) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
@@ -34,14 +22,19 @@ export async function POST(request: NextRequest) {
     const { userId } = JSON.parse(token);
     const { content } = await request.json();
 
-    const post = await prisma.post.create({
-      data: { content, userId, published: true },
-      include: { user: { select: { id: true, username: true, displayName: true } } },
-    });
+    const post = { 
+      id: String(postIdCounter++), 
+      content, 
+      userId,
+      createdAt: new Date().toISOString(),
+      user: { id: userId, username: 'user', displayName: 'User' }
+    };
+    users._demoPosts.unshift(post);
+    users._demoUserIdCounter = userIdCounter;
+    users._demoPostIdCounter = postIdCounter;
 
     return NextResponse.json(post, { status: 201 });
-  } catch (error: any) {
-    console.error('Error:', error);
-    return NextResponse.json({ message: error.message || 'Error' }, { status: 500 });
+  } catch (error) {
+    return NextResponse.json({ message: 'Error' }, { status: 500 });
   }
 }

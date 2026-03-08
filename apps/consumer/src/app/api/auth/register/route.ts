@@ -1,26 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// Shared in-memory storage
+const users = globalThis as any;
+if (!users._demoUsers) users._demoUsers = new Map();
+if (!users._demoPosts) users._demoPosts = [];
+let userIdCounter = users._demoUserIdCounter || 1;
+let postIdCounter = users._demoPostIdCounter || 1;
+
 export async function POST(request: NextRequest) {
   try {
-    const { PrismaClient } = await import('@prisma/client');
-    const prisma = new PrismaClient();
-    
     const { email, username, displayName, password } = await request.json();
     
-    const passwordHash = Buffer.from(password).toString('base64');
+    // Check existing
+    const existingEmail = [...users._demoUsers.values()].find((u: any) => u.email === email);
+    const existingUser = [...users._demoUsers.values()].find((u: any) => u.username === username);
+    if (existingEmail || existingUser) {
+      return NextResponse.json({ message: 'User already exists' }, { status: 400 });
+    }
     
-    const user = await prisma.user.create({
-      data: { email, username, displayName, passwordHash, role: 'USER' },
-    });
-
+    const user = { id: String(userIdCounter++), email, username, displayName, password };
+    users._demoUsers.set(user.id, user);
+    
     const token = Buffer.from(JSON.stringify({ userId: user.id })).toString('base64');
-
+    users._demoUserIdCounter = userIdCounter;
     return NextResponse.json({ 
-      user: { id: user.id, email: user.email, username: user.username, displayName: user.displayName },
+      user: { id: user.id, email, username, displayName },
       token 
     }, { status: 201 });
-  } catch (error: any) {
-    console.error('Register error:', error);
-    return NextResponse.json({ message: error.message || 'Error' }, { status: 500 });
+  } catch (error) {
+    return NextResponse.json({ message: 'Error' }, { status: 500 });
   }
 }
