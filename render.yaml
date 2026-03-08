@@ -9,4 +9,4 @@ services:
     startCommand: cd apps/backend && node dist/main.js
     envVars:
       - key: DATABASE_URL
-        value: "postgresql://coffee_db_5w0e_user:nkbtRVXPsWqyeB7XUFr1WUal4hmiPYBh@dpg-d6kl09rh46gs73d0i5v0-a.singapore-postgres.render.com/coffee_db_5w0e"
+        value: "postgresql://neondb_owner:npg_dtR62fYjGqKa@ep-silent-math-ak0xx55v.c-3.us-west-2.aws.neon.tech/neondb?sslmode=require"
