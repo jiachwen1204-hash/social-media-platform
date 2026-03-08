@@ -3,6 +3,17 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const sql = neon(process.env.DATABASE_URL!);
 
+function corsResponse(data: any, status = 200) {
+  return NextResponse.json(data, {
+    status,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    },
+  });
+}
+
 export async function GET() {
   try {
     const posts = await sql`
@@ -14,13 +25,13 @@ export async function GET() {
       ORDER BY p."createdAt" DESC
       LIMIT 20
     `;
-    return NextResponse.json(posts.map((p: any) => ({
+    return corsResponse(posts.map((p: any) => ({
       id: p.id, content: p.content, published: p.published, createdAt: p.createdAt, updatedAt: p.updatedAt,
       user: { id: p.user_id, username: p.username, displayName: p.displayName }
     })));
   } catch (error: any) {
     console.error('Error:', error);
-    return NextResponse.json({ message: error.message || 'Error' }, { status: 500 });
+    return corsResponse({ message: error.message || 'Error' }, 500);
   }
 }
 
@@ -28,7 +39,7 @@ export async function POST(request: NextRequest) {
   try {
     const authHeader = request.headers.get('authorization');
     if (!authHeader) {
-      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+      return corsResponse({ message: 'Unauthorized' }, 401);
     }
 
     const token = Buffer.from(authHeader.replace('Bearer ', ''), 'base64').toString();
@@ -42,12 +53,16 @@ export async function POST(request: NextRequest) {
     const userResult = await sql`SELECT id, username, "displayName" FROM users WHERE id = ${userId}`;
     const user = userResult[0];
     
-    return NextResponse.json({ 
+    return corsResponse({ 
       id, content, userId, published: true, createdAt: now, updatedAt: now,
       user: { id: user.id, username: user.username, displayName: user.displayName }
-    }, { status: 201 });
+    }, 201);
   } catch (error: any) {
     console.error('Error:', error);
-    return NextResponse.json({ message: error.message || 'Error' }, { status: 500 });
+    return corsResponse({ message: error.message || 'Error' }, 500);
   }
+}
+
+export async function OPTIONS() {
+  return corsResponse({}, 204);
 }

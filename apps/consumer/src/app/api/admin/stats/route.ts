@@ -13,25 +13,33 @@ function getUserIdFromToken(authHeader: string | null): string | null {
   }
 }
 
+function corsResponse(data: any, status = 200) {
+  return NextResponse.json(data, {
+    status,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    },
+  });
+}
+
 export async function GET(request: NextRequest) {
   try {
     const userId = getUserIdFromToken(request.headers.get('authorization'));
     if (!userId) {
-      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+      return corsResponse({ message: 'Unauthorized' }, 401);
     }
 
-    // Check admin role
     const userResult = await sql`SELECT role FROM users WHERE id = ${userId}`;
     if (userResult.length === 0 || userResult[0].role !== 'ADMIN') {
-      return NextResponse.json({ message: 'Forbidden: Admin only' }, { status: 403 });
+      return corsResponse({ message: 'Forbidden: Admin only' }, 403);
     }
 
-    // Get total counts
     const userCount = await sql`SELECT COUNT(*) as count FROM users`;
     const postCount = await sql`SELECT COUNT(*) as count FROM posts`;
     const publishedPostCount = await sql`SELECT COUNT(*) as count FROM posts WHERE published = true`;
 
-    // Get user growth (last 7 days)
     const userGrowth = await sql`
       SELECT DATE("createdAt") as date, COUNT(*) as count 
       FROM users 
@@ -40,7 +48,6 @@ export async function GET(request: NextRequest) {
       ORDER BY date
     `;
 
-    // Get post growth (last 7 days)
     const postGrowth = await sql`
       SELECT DATE("createdAt") as date, COUNT(*) as count 
       FROM posts 
@@ -49,14 +56,13 @@ export async function GET(request: NextRequest) {
       ORDER BY date
     `;
 
-    // Get role distribution
     const roleDistribution = await sql`
       SELECT role, COUNT(*) as count 
       FROM users 
       GROUP BY role
     `;
 
-    return NextResponse.json({
+    return corsResponse({
       totalUsers: parseInt(userCount[0]?.count || '0'),
       totalPosts: parseInt(postCount[0]?.count || '0'),
       publishedPosts: parseInt(publishedPostCount[0]?.count || '0'),
@@ -66,6 +72,10 @@ export async function GET(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('Error:', error);
-    return NextResponse.json({ message: error.message || 'Error' }, { status: 500 });
+    return corsResponse({ message: error.message || 'Error' }, 500);
   }
+}
+
+export async function OPTIONS() {
+  return corsResponse({}, 204);
 }
