@@ -16,7 +16,7 @@ export default function AdminLogin() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('https://social-backend-4rif.onrender.com/api/auth/login', { 
+      const res = await fetch('https://consumer-jet.vercel.app/api/auth/login', { 
         method: 'POST', 
         headers: { 'Content-Type': 'application/json' }, 
         body: JSON.stringify({ email, password }) 
