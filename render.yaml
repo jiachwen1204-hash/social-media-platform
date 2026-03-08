@@ -1,10 +1,10 @@
 services:
   - name: social-backend
-    type: web
+    type: web_service
     runtime: node
     region: singapore
     repo: https://github.com/jiachwen1204-hash/social-media-platform
-    branch: master
+    branch: main
     buildCommand: cd apps/backend && npm install && npx prisma generate && npm run build
     startCommand: cd apps/backend && node dist/main.js
     envVars:
