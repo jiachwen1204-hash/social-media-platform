@@ -16,10 +16,18 @@ export default function Login() {
     setLoading(true);
     setError('');
     try {
-      // Mock login for demo - always succeeds
-    const token = 'demo-token-' + Date.now();
-    localStorage.setItem('token', token); 
-    window.location.href = '/feed';
+      const res = await fetch('/api/auth/login', { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify({ email, password }) 
+      });
+      const data = await res.json();
+      if (data.token) { 
+        localStorage.setItem('token', data.token); 
+        window.location.href = '/feed'; 
+      } else {
+        setError('Invalid email or password');
+      }
     } catch (e) {
       setError('Unable to connect. Please try again.');
     }
@@ -29,7 +37,6 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
-        {/* Logo */}
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center space-x-2">
             <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center">
@@ -41,64 +48,32 @@ export default function Login() {
           </Link>
         </div>
 
-        {/* Form Card */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
           <h1 className="text-2xl font-bold text-slate-900 mb-2">Welcome back</h1>
-          <p className="text-slate-600 mb-8">Enter your credentials to access your account</p>
+          <p className="text-slate-600 mb-8">Enter your credentials</p>
           
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6 text-sm">
-              {error}
-            </div>
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6 text-sm">{error}</div>
           )}
           
           <div className="space-y-5">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-2">
-                Email Address
-              </label>
-              <input 
-                id="email"
-                type="email" 
-                className="input-field" 
-                placeholder="you@example.com"
-                value={email} 
-                onChange={e => setEmail(e.target.value)} 
-              />
+              <label className="block text-sm font-medium text-slate-700 mb-2">Email</label>
+              <input type="email" className="input-field" placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} />
             </div>
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-2">
-                Password
-              </label>
-              <input 
-                id="password"
-                type="password" 
-                className="input-field" 
-                placeholder="••••••••"
-                value={password} 
-                onChange={e => setPassword(e.target.value)} 
-              />
+              <label className="block text-sm font-medium text-slate-700 mb-2">Password</label>
+              <input type="password" className="input-field" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} />
             </div>
-            <button 
-              onClick={handleLogin} 
-              disabled={loading}
-              className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+            <button onClick={handleLogin} disabled={loading} className="btn-primary disabled:opacity-50">
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
           </div>
           
           <p className="text-center text-slate-600 mt-8">
-            Don't have an account?{' '}
-            <Link href="/register" className="text-indigo-600 font-semibold hover:text-indigo-700 transition-colors">
-              Sign up
-            </Link>
+            Don't have an account? <Link href="/register" className="text-indigo-600 font-semibold">Sign up</Link>
           </p>
         </div>
-        
-        <p className="text-center text-slate-500 text-sm mt-6">
-          <Link href="/" className="hover:text-indigo-600 transition-colors">← Back to home</Link>
-        </p>
       </div>
     </div>
   );

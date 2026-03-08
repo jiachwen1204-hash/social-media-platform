@@ -1,31 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
 
 export async function POST(request: NextRequest) {
   try {
     const { email, password } = await request.json();
     
-    const user = await prisma.user.findUnique({ where: { email } });
-    
-    if (!user) {
-      return NextResponse.json({ message: 'Invalid credentials' }, { status: 401 });
-    }
+    // Mock response for demo
+    const user = { id: '1', email, username: email.split('@')[0], displayName: 'Demo User' };
+    const token = 'demo-token-' + Date.now();
 
-    // Simple check (use bcrypt in production)
-    const passwordMatch = atob(user.passwordHash) === password;
-    if (!passwordMatch) {
-      return NextResponse.json({ message: 'Invalid credentials' }, { status: 401 });
-    }
-
-    const token = Buffer.from(JSON.stringify({ userId: user.id })).toString('base64');
-
-    return NextResponse.json({ 
-      user: { id: user.id, email: user.email, username: user.username, displayName: user.displayName },
-      token 
-    });
+    return NextResponse.json({ user, token });
   } catch (error) {
-    return NextResponse.json({ message: 'Error logging in' }, { status: 500 });
+    return NextResponse.json({ message: 'Error' }, { status: 500 });
   }
 }
