@@ -5,12 +5,19 @@ import Link from 'next/link';
 export default function Feed() {
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/posts')
-      .then(res => res.json())
-      .then(data => setPosts(data))
-      .catch(() => setPosts([]))
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch');
+        return res.json();
+      })
+      .then(data => setPosts(Array.isArray(data) ? data : []))
+      .catch(err => {
+        console.error('Fetch error:', err);
+        setError(err.message);
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -58,7 +65,12 @@ export default function Feed() {
 
         {/* Posts */}
         {loading ? (
-          <div className="text-center py-8 text-gray-500">Loading...</div>
+          <div className="text-center py-8">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-indigo-600 border-t-transparent"></div>
+            <p className="text-gray-500 mt-2">Loading posts...</p>
+          </div>
+        ) : error ? (
+          <div className="text-center py-8 text-red-500">Error: {error}</div>
         ) : posts.length === 0 ? (
           <div className="text-center py-8 text-gray-500">No posts yet. Be the first to share!</div>
         ) : (
