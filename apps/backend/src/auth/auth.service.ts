@@ -1,19 +1,48 @@
 import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+
+const prisma = new PrismaClient();
+
 @Injectable()
 export class AuthService {
   constructor(private jwt: JwtService) {}
-  private users: any[] = [];
+
   async register(email: string, username: string, displayName: string, password: string) {
-    if (this.users.find(u => u.email === email || u.username === username)) throw new ConflictException('exists');
-    const user = { id: Date.now().toString(), email, username, displayName, passwordHash: await bcrypt.hash(password, 10) };
-    this.users.push(user);
-    return { user: { ...user, passwordHash: undefined }, token: this.jwt.sign({ sub: user.id }) };
+    const existing = await prisma.user.findFirst({
+      where: { OR: [{ email }, { username }] }
+    });
+    
+    if (existing) {
+      throw new ConflictException('User with this email or username already exists');
+    }
+
+    const user = await prisma.user.create({
+      data: {
+        email,
+        username,
+        displayName,
+        passwordHash: await bcrypt.hash(password, 10),
+      },
+    });
+
+    return {
+      user: { id: user.id, email: user.email, username: user.username, displayName: user.displayName },
+      token: this.jwt.sign({ sub: user.id }),
+    };
   }
+
   async login(email: string, password: string) {
-    const user = this.users.find(u => u.email === email);
-    if (!user || !(await bcrypt.compare(password, user.passwordHash))) throw new UnauthorizedException('invalid');
-    return { user: { ...user, passwordHash: undefined }, token: this.jwt.sign({ sub: user.id }) };
+    const user = await prisma.user.findUnique({ where: { email } });
+    
+    if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    return {
+      user: { id: user.id, email: user.email, username: user.username, displayName: user.displayName },
+      token: this.jwt.sign({ sub: user.id }),
+    };
   }
 }
