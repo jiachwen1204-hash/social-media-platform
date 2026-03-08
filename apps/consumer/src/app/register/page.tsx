@@ -22,7 +22,7 @@ export default function Register() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('https://social-backend-4rif.onrender.com/api/auth/register', { 
+      const res = await fetch('/api/auth/register', { 
         method: 'POST', 
         headers: { 'Content-Type': 'application/json' }, 
         body: JSON.stringify({ email, username, displayName, password }) 
