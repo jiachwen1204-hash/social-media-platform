@@ -6,20 +6,39 @@ export default function Feed() {
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [newPost, setNewPost] = useState('');
 
   useEffect(() => {
     fetch('/api/posts')
-      .then(res => {
-        if (!res.ok) throw new Error('Failed to fetch');
-        return res.json();
-      })
+      .then(res => res.json())
       .then(data => setPosts(Array.isArray(data) ? data : []))
-      .catch(err => {
-        console.error('Fetch error:', err);
-        setError(err.message);
-      })
+      .catch(err => setError(err.message))
       .finally(() => setLoading(false));
   }, []);
+
+  const handlePost = async () => {
+    if (!newPost.trim()) return;
+    const token = localStorage.getItem('token');
+    if (!token) {
+      window.location.href = '/login';
+      return;
+    }
+    
+    try {
+      const res = await fetch('/api/posts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ content: newPost })
+      });
+      if (res.ok) {
+        const post = await res.json();
+        setPosts([post, ...posts]);
+        setNewPost('');
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -34,16 +53,11 @@ export default function Feed() {
           <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-rose-500 bg-clip-text text-transparent">
             SocialHub
           </h1>
-          <div className="flex items-center space-x-3">
-            <Link href="/" className="text-sm text-gray-500 hover:text-indigo-600 font-medium">
-              Home
-            </Link>
-            <button 
-              onClick={handleLogout}
-              className="text-sm text-gray-500 hover:text-gray-700 font-medium"
-            >
-              Sign Out
-            </button>
+          <div className="flex items-center space-x-4">
+            <Link href="/feed" className="text-sm font-medium text-indigo-600">Home</Link>
+            <Link href="/explore" className="text-sm text-gray-500 hover:text-indigo-600">Explore</Link>
+            <Link href="/profile" className="text-sm text-gray-500 hover:text-indigo-600">Profile</Link>
+            <button onClick={handleLogout} className="text-sm text-gray-500 hover:text-gray-700">Sign Out</button>
           </div>
         </div>
       </header>
@@ -55,9 +69,11 @@ export default function Feed() {
             className="w-full border-0 focus:ring-0 resize-none text-gray-700 placeholder-gray-400"
             placeholder="What's on your mind?"
             rows={3}
+            value={newPost}
+            onChange={(e) => setNewPost(e.target.value)}
           />
           <div className="flex justify-end mt-3 pt-3 border-t border-gray-100">
-            <button className="bg-indigo-600 text-white px-6 py-2 rounded-xl font-semibold hover:bg-indigo-700 transition">
+            <button onClick={handlePost} className="bg-indigo-600 text-white px-6 py-2 rounded-xl font-semibold hover:bg-indigo-700 transition">
               Post
             </button>
           </div>
