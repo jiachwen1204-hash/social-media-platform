@@ -1,27 +1,47 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET() {
-  // Mock posts for demo
-  const posts = [
-    { id: '1', content: 'Welcome to SocialHub! This is a demo post.', createdAt: new Date().toISOString(), user: { id: '1', username: 'demo', displayName: 'Demo User' } },
-    { id: '2', content: 'Connect with friends and share moments.', createdAt: new Date().toISOString(), user: { id: '2', username: 'admin', displayName: 'Admin' } },
-  ];
-  return NextResponse.json(posts);
+  try {
+    const { PrismaClient } = await import('@prisma/client');
+    const prisma = new PrismaClient();
+    
+    const posts = await prisma.post.findMany({
+      where: { published: true },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+      include: {
+        user: { select: { id: true, username: true, displayName: true } },
+      },
+    });
+    return NextResponse.json(posts);
+  } catch (error: any) {
+    console.error('Error:', error);
+    return NextResponse.json({ message: error.message || 'Error' }, { status: 500 });
+  }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization');
-    const { content } = await request.json();
+    const { PrismaClient } = await import('@prisma/client');
+    const prisma = new PrismaClient();
     
-    const post = { 
-      id: Date.now().toString(), 
-      content, 
-      createdAt: new Date().toISOString(), 
-      user: { id: '1', username: 'user', displayName: 'User' } 
-    };
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader) {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    }
+
+    const token = Buffer.from(authHeader.replace('Bearer ', ''), 'base64').toString();
+    const { userId } = JSON.parse(token);
+    const { content } = await request.json();
+
+    const post = await prisma.post.create({
+      data: { content, userId, published: true },
+      include: { user: { select: { id: true, username: true, displayName: true } } },
+    });
+
     return NextResponse.json(post, { status: 201 });
-  } catch (error) {
-    return NextResponse.json({ message: 'Error creating post' }, { status: 500 });
+  } catch (error: any) {
+    console.error('Error:', error);
+    return NextResponse.json({ message: error.message || 'Error' }, { status: 500 });
   }
 }

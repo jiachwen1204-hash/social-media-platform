@@ -2,14 +2,25 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
+    const { PrismaClient } = await import('@prisma/client');
+    const prisma = new PrismaClient();
+    
     const { email, password } = await request.json();
     
-    // Mock response for demo
-    const user = { id: '1', email, username: email.split('@')[0], displayName: 'Demo User' };
-    const token = 'demo-token-' + Date.now();
+    const user = await prisma.user.findUnique({ where: { email } });
+    
+    if (!user || Buffer.from(user.passwordHash, 'base64').toString() !== password) {
+      return NextResponse.json({ message: 'Invalid credentials' }, { status: 401 });
+    }
 
-    return NextResponse.json({ user, token });
-  } catch (error) {
-    return NextResponse.json({ message: 'Error' }, { status: 500 });
+    const token = Buffer.from(JSON.stringify({ userId: user.id })).toString('base64');
+
+    return NextResponse.json({ 
+      user: { id: user.id, email: user.email, username: user.username, displayName: user.displayName },
+      token 
+    });
+  } catch (error: any) {
+    console.error('Login error:', error);
+    return NextResponse.json({ message: error.message || 'Error' }, { status: 500 });
   }
 }
