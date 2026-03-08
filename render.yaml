@@ -1,6 +1,7 @@
 services:
   - name: social-backend
-    type: web_service
+    type: web
+    runtime: node
     region: singapore
     repo: https://github.com/jiachwen1204-hash/social-media-platform
     branch: master
