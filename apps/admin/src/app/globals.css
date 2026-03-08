@@ -4,6 +4,44 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --color-primary: #0f172a;
+  --color-accent: #3b82f6;
+  --color-surface: #ffffff;
+  --color-background: #f8fafc;
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #64748b;
+  --color-border: #e2e8f0;
+}
+
+* { box-sizing: border-box; }
+
+html {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
 body {
-  font-family: 'Inter', system-ui, sans-serif;
+  margin: 0;
+  background-color: var(--color-background);
+  color: var(--color-text-primary);
+  line-height: 1.6;
+}
+
+@layer components {
+  .btn-admin {
+    @apply w-full bg-slate-800 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200;
+  }
+  .btn-admin:hover {
+    @apply bg-slate-700;
+  }
+  .input-admin {
+    @apply w-full px-4 py-3 border border-slate-200 rounded-xl outline-none transition-all duration-200;
+  }
+  .input-admin:focus {
+    @apply border-blue-500 ring-2 ring-blue-500/20;
+  }
+  .stat-card {
+    @apply bg-white rounded-xl shadow-sm border border-slate-200 p-6;
+  }
 }

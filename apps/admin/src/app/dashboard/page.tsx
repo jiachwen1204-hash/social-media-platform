@@ -1,11 +1,17 @@
 'use client';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
 
 export default function Dashboard() {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+  const [loading, setLoading] = useState(true);
   
-  useEffect(() => { 
-    if (!token) window.location.href = '/login'; 
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      window.location.href = '/login';
+    } else {
+      setLoading(false);
+    }
   }, []);
 
   const handleLogout = () => {
@@ -14,26 +20,29 @@ export default function Dashboard() {
   };
 
   const stats = [
-    { label: 'Total Users', value: '1,234', change: '+12%', color: 'indigo' },
-    { label: 'Active Posts', value: '567', change: '+8%', color: 'purple' },
-    { label: 'Reports', value: '23', change: '-5%', color: 'rose' },
-    { label: 'Revenue', value: '$12.5k', change: '+15%', color: 'emerald' },
+    { label: 'Total Users', value: '1,234', change: '+12%', positive: true },
+    { label: 'Active Posts', value: '567', change: '+8%', positive: true },
+    { label: 'Reports', value: '23', change: '-5%', positive: false },
+    { label: 'Revenue', value: '$12.5k', change: '+15%', positive: true },
   ];
 
   const recentUsers = [
     { name: 'John Doe', email: 'john@example.com', joined: '2 min ago', status: 'active' },
     { name: 'Jane Smith', email: 'jane@example.com', joined: '15 min ago', status: 'active' },
     { name: 'Alex Chen', email: 'alex@example.com', joined: '1 hour ago', status: 'pending' },
+    { name: 'Sarah Wilson', email: 'sarah@example.com', joined: '2 hours ago', status: 'active' },
   ];
 
+  if (loading) return null;
+
   return (
-    <div className="min-h-screen bg-slate-100">
+    <div className="min-h-screen bg-slate-50">
       {/* Top Navigation */}
-      <nav className="bg-white shadow-sm border-b border-slate-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <nav className="bg-white border-b border-slate-200 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-6">
           <div className="flex justify-between h-16">
             <div className="flex items-center">
-              <h1 className="text-xl font-bold text-slate-800">Admin Portal</h1>
+              <h1 className="text-xl font-bold text-slate-900">Admin Portal</h1>
             </div>
             <div className="flex items-center space-x-4">
               <button className="p-2 text-slate-500 hover:text-slate-700">
@@ -49,16 +58,22 @@ export default function Dashboard() {
         </div>
       </nav>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        {/* Welcome */}
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold text-slate-900">Dashboard</h2>
+          <p className="text-slate-600">Welcome back! Here's what's happening.</p>
+        </div>
+
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {stats.map((stat, i) => (
-            <div key={i} className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <div key={i} className="stat-card">
               <p className="text-sm font-medium text-slate-500 mb-1">{stat.label}</p>
               <div className="flex items-end justify-between">
                 <p className="text-3xl font-bold text-slate-900">{stat.value}</p>
                 <span className={`text-sm font-semibold ${
-                  stat.change.startsWith('+') ? 'text-emerald-600' : 'text-rose-600'
+                  stat.positive ? 'text-emerald-600' : 'text-rose-600'
                 }`}>
                   {stat.change}
                 </span>
@@ -97,7 +112,7 @@ export default function Dashboard() {
               ))}
             </div>
             <div className="px-6 py-4 border-t border-slate-200">
-              <a href="#" className="text-sm text-indigo-600 hover:text-indigo-700 font-medium">View all users →</a>
+              <Link href="#" className="text-sm text-indigo-600 hover:text-indigo-700 font-medium">View all users →</Link>
             </div>
           </div>
 
