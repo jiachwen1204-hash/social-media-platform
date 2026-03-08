@@ -3,14 +3,6 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const sql = neon(process.env.DATABASE_URL!);
 
-function generateId() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = Math.random() * 16 | 0;
-    const v = c === 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
-}
-
 export async function GET() {
   try {
     const posts = await sql`
@@ -43,7 +35,7 @@ export async function POST(request: NextRequest) {
     const { userId } = JSON.parse(token);
     const { content } = await request.json();
 
-    const id = generateId();
+    const id = crypto.randomUUID();
     const now = new Date().toISOString();
     await sql`INSERT INTO posts(id, content, "userId", published, "createdAt", "updatedAt") VALUES(${id}, ${content}, ${userId}, true, ${now}, ${now})`;
     
