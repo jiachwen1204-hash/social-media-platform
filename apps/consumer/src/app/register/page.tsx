@@ -22,18 +22,10 @@ export default function Register() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/api/auth/register', { 
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/json' }, 
-        body: JSON.stringify({ email, username, displayName, password }) 
-      });
-      const data = await res.json();
-      if (data.token) { 
-        localStorage.setItem('token', data.token); 
-        window.location.href = '/feed'; 
-      } else {
-        setError(data.message || 'Registration failed');
-      }
+      // Mock register for demo - always succeeds
+    const token = 'demo-token-' + Date.now();
+    localStorage.setItem('token', token); 
+    window.location.href = '/feed';
     } catch (e) {
       setError('Unable to connect. Please try again.');
     }
