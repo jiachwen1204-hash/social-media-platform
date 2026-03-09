@@ -88,7 +88,7 @@ function CommentSection({ postId, comments, onAddComment }: { postId: string; co
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
         </svg>
-        <span className="font-medium">{comments.length || ''}</span>
+        <span className="font-medium">{comments.length > 0 ? `Comment${comments.length > 1 ? 's' : ''} (${comments.length})` : 'Comment'}</span>
       </button>
       
       {showComments && (
@@ -105,15 +105,24 @@ function CommentSection({ postId, comments, onAddComment }: { postId: string; co
           ) : (
             <p className="text-sm text-gray-400 mb-3">No comments yet. Be the first!</p>
           )}
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
             <input 
               type="text"
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
-              placeholder="Write a comment..."
+              placeholder="Add a comment..."
               className="flex-1 px-4 py-2 border border-gray-200 rounded-full text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-50"
               onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
             />
+            <button 
+              onClick={handleSubmit}
+              disabled={!newComment.trim() || submitting}
+              className="p-2 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 disabled:opacity-50 transition"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+              </svg>
+            </button>
           </div>
         </div>
       )}
@@ -138,7 +147,21 @@ export default function Feed() {
       });
       if (!res.ok) throw new Error('Failed to load posts');
       const data = await res.json();
-      setPosts(Array.isArray(data) ? data : []);
+      const postsArray = Array.isArray(data) ? data : [];
+      setPosts(postsArray);
+      
+      // Fetch comments for each post
+      const commentsData: Record<string, any[]> = {};
+      for (const post of postsArray) {
+        try {
+          const commentsRes = await fetch(`/api/comments?postId=${post.id}`);
+          if (commentsRes.ok) {
+            const commentsList = await commentsRes.json();
+            commentsData[post.id] = commentsList;
+          }
+        } catch (e) {}
+      }
+      setComments(commentsData);
     } catch (err) {
       setError('Unable to load posts. Please try again.');
     } finally {
