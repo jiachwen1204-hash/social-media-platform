@@ -22,9 +22,9 @@ export default function Explore() {
     <div className="min-h-screen bg-slate-50">
       <header className="bg-white shadow-sm sticky top-0 z-50">
         <div className="max-w-2xl mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-rose-500 bg-clip-text text-transparent">
+          <Link href="/" className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-rose-500 bg-clip-text text-transparent hover:opacity-80">
             SocialHub
-          </h1>
+          </Link>
           <div className="flex items-center space-x-4">
             <Link href="/feed" className="text-sm text-gray-500 hover:text-indigo-600">Home</Link>
             <Link href="/explore" className="text-sm font-medium text-indigo-600">Explore</Link>
