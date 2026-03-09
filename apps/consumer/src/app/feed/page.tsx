@@ -235,10 +235,19 @@ export default function Feed() {
       });
       if (res.ok) {
         const comment = await res.json();
+        
+        // Update local state
         const newComments = { ...comments };
         if (!newComments[postId]) newComments[postId] = [];
         newComments[postId].push(comment);
         setComments(newComments);
+        
+        // Also refetch to ensure sync
+        const fetchRes = await fetch(`/api/comments?postId=${postId}`);
+        if (fetchRes.ok) {
+          const fetchedComments = await fetchRes.json();
+          setComments(prev => ({ ...prev, [postId]: fetchedComments }));
+        }
       }
     } catch (err) {
       console.error(err);
