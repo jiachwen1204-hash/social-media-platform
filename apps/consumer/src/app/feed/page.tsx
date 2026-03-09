@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import BottomNav from '../../components/BottomNav';
 
 // Loading skeleton component
 function PostSkeleton() {
@@ -243,9 +244,9 @@ export default function Feed() {
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto px-4 py-6">
+      <main className="max-w-2xl mx-auto px-4 py-6 pb-24">
         {/* New Post Card */}
-        <div className="bg-white rounded-2xl shadow-sm p-4 mb-6">
+        <div className="bg-white rounded-2xl shadow-sm p-4 mb-6 hover:shadow-md transition-shadow">
           <textarea 
             className="w-full border-0 focus:ring-0 resize-none text-gray-700 placeholder-gray-400"
             placeholder="What's on your mind?"
@@ -258,7 +259,7 @@ export default function Feed() {
             <button 
               onClick={handlePost} 
               disabled={!newPost.trim()}
-              className="bg-indigo-600 text-white px-6 py-2 rounded-xl font-semibold hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-indigo-600 text-white px-6 py-2 rounded-xl font-semibold hover:bg-indigo-700 hover:scale-105 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
             >
               Post
             </button>
@@ -279,7 +280,7 @@ export default function Feed() {
         ) : (
           <div className="space-y-4">
             {posts.map((post: any) => (
-              <div key={post.id} className="bg-white rounded-2xl shadow-sm p-5 hover:shadow-md transition-shadow">
+              <div key={post.id} className="bg-white rounded-2xl shadow-sm p-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
                 <div className="flex items-center mb-3">
                   <div className="w-12 h-12 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-lg">
                     {(post.user?.displayName || post.user?.username || 'U').charAt(0).toUpperCase()}
@@ -318,6 +319,7 @@ export default function Feed() {
           </div>
         )}
       </main>
+      <BottomNav />
     </div>
   );
 }
