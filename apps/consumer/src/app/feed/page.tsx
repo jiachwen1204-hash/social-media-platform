@@ -136,22 +136,19 @@ export default function Feed() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [newPost, setNewPost] = useState('');
-  const [likedPosts, setLikedPosts] = useState<Record<string, boolean>>({});
-  const [likeCounts, setLikeCounts] = useState<Record<string, number>>({});
   const [comments, setComments] = useState<Record<string, any[]>>({});
 
   const fetchPosts = async () => {
     setLoading(true);
     setError(null);
+    const token = localStorage.getItem('token');
     try {
-      const res = await fetch('/api/posts');
+      const res = await fetch('/api/posts', {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
       if (!res.ok) throw new Error('Failed to load posts');
       const data = await res.json();
       setPosts(Array.isArray(data) ? data : []);
-      // Initialize like counts
-      const counts: Record<string, number> = {};
-      (data || []).forEach((p: any) => { counts[p.id] = p.likes || 0; });
-      setLikeCounts(counts);
     } catch (err) {
       setError('Unable to load posts. Please try again.');
     } finally {
@@ -181,27 +178,33 @@ export default function Feed() {
         const post = await res.json();
         setPosts([post, ...posts]);
         setNewPost('');
-        setLikeCounts({ ...likeCounts, [post.id]: 0 });
       }
     } catch (err) {
       console.error(err);
     }
   };
 
-  const handleLike = (postId: string) => {
+  const handleLike = async (postId: string) => {
     const token = localStorage.getItem('token');
     if (!token) {
       window.location.href = '/login';
       return;
     }
     
-    // Toggle like locally
-    const newLiked = !likedPosts[postId];
-    setLikedPosts({ ...likedPosts, [postId]: newLiked });
-    setLikeCounts({ 
-      ...likeCounts, 
-      [postId]: newLiked ? (likeCounts[postId] || 0) + 1 : Math.max(0, (likeCounts[postId] || 0) - 1)
-    });
+    try {
+      const res = await fetch(`/api/posts?action=like&postId=${postId}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPosts(posts.map(p => 
+          p.id === postId ? { ...p, liked: data.liked, likes: data.likes } : p
+        ));
+      }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const handleAddComment = async (postId: string, content: string) => {
@@ -211,7 +214,7 @@ export default function Feed() {
       return;
     }
     
-    // Add comment locally (in real app, would call API)
+    // Add comment locally (would call API in production)
     const newComments = { ...comments };
     if (!newComments[postId]) newComments[postId] = [];
     newComments[postId].push({ username: 'You', content });
@@ -290,12 +293,12 @@ export default function Feed() {
                 <div className="flex items-center pt-3 border-t border-gray-100">
                   <button 
                     onClick={() => handleLike(post.id)}
-                    className={`flex items-center space-x-1 transition ${likedPosts[post.id] ? 'text-rose-500' : 'text-gray-500 hover:text-rose-500'}`}
+                    className={`flex items-center space-x-1 transition ${post.liked ? 'text-rose-500' : 'text-gray-500 hover:text-rose-500'}`}
                   >
-                    <svg className="w-5 h-5" fill={likedPosts[post.id] ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5" fill={post.liked ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                     </svg>
-                    <span>{likeCounts[post.id] || 0}</span>
+                    <span>{post.likes || 0}</span>
                   </button>
                   <CommentSection 
                     postId={post.id} 
