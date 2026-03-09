@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
       return {
         id: p.id,
         content: p.content,
-        imageUrl: p.imageUrl,
+        images: typeof p.images === 'string' ? JSON.parse(p.images || '[]') : (p.images || []),
         published: p.published,
         createdAt: p.createdAt,
         updatedAt: p.updatedAt,
@@ -116,25 +116,26 @@ export async function POST(request: NextRequest) {
     }
 
     // Create post action (default)
-    const { content, imageUrl } = await request.json();
-    if (!content?.trim()) {
-      return corsResponse({ message: 'Content is required' }, 400);
+    const { content, images } = await request.json();
+    if (!content?.trim() && (!images || images.length === 0)) {
+      return corsResponse({ message: 'Content or images required' }, 400);
     }
 
-    // Add imageUrl column if not exists
+    // Add images column if not exists (JSONB)
     try {
-      await sql`ALTER TABLE posts ADD COLUMN IF NOT EXISTS "imageUrl" TEXT`;
+      await sql`ALTER TABLE posts ADD COLUMN IF NOT EXISTS images JSONB DEFAULT '[]'`;
     } catch (e) {}
 
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
-    await sql`INSERT INTO posts(id, content, "imageUrl", "userId", published, "createdAt", "updatedAt") VALUES(${id}, ${content}, ${imageUrl || null}, ${userId}, true, ${now}, ${now})`;
+    const imagesJson = JSON.stringify(images || []);
+    await sql`INSERT INTO posts(id, content, images, "userId", published, "createdAt", "updatedAt") VALUES(${id}, ${content}, ${imagesJson}, ${userId}, true, ${now}, ${now})`;
     
     const userResult = await sql`SELECT id, username, "displayName" FROM users WHERE id = ${userId}`;
     const user = userResult[0];
     
     return corsResponse({ 
-      id, content, imageUrl: imageUrl || null, userId, published: true, createdAt: now, updatedAt: now, likes: 0, liked: false,
+      id, content, images: images || [], userId, published: true, createdAt: now, updatedAt: now, likes: 0, liked: false,
       user: { id: user.id, username: user.username, displayName: user.displayName }
     }, 201);
   } catch (error: any) {

@@ -290,9 +290,11 @@ export default function Feed() {
                   </div>
                 </div>
                 <p className="text-gray-700 text-lg mb-3">{post.content}</p>
-                {post.imageUrl && (
-                  <div className="mb-3 rounded-xl overflow-hidden">
-                    <img src={post.imageUrl} alt="Post media" className="w-full max-h-80 object-cover" />
+                {post.images && post.images.length > 0 && (
+                  <div className={`mb-3 rounded-xl overflow-hidden ${post.images.length === 1 ? '' : 'grid grid-cols-2 gap-1'}`}>
+                    {post.images.slice(0, 4).map((img: string, i: number) => (
+                      <img key={i} src={img} alt={`Post ${i + 1}`} className="w-full h-64 object-cover" />
+                    ))}
                   </div>
                 )}
                 <div className="flex items-center gap-6 pt-3 border-t border-gray-100">
