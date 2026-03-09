@@ -16,7 +16,7 @@ export default function Reels() {
   const [reels, setReels] = useState<Reel[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [liked, setLiked] = useState<Record<string, boolean>>({});
+  const [likedReels, setLikedReels] = useState<Record<string, boolean>>({});
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -44,8 +44,14 @@ export default function Reels() {
   }, [reels]);
 
   const handleLike = async (reelId: string) => {
-    const newLiked = !liked[reelId];
-    setLiked({ ...liked, [reelId]: newLiked });
+    const token = localStorage.getItem('token');
+    if (!token) {
+      window.location.href = '/login';
+      return;
+    }
+    
+    const newLiked = !likedReels[reelId];
+    setLikedReels({ ...likedReels, [reelId]: newLiked });
   };
 
   const handleLogout = () => {
@@ -89,7 +95,7 @@ export default function Reels() {
               >
                 <div className="w-full max-w-sm h-full bg-gray-900 relative flex flex-col">
                   {/* Video/Content Area */}
-                  <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
+                  <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900 relative">
                     {reel.videoUrl ? (
                       <video 
                         src={reel.videoUrl} 
@@ -101,10 +107,24 @@ export default function Reels() {
                       />
                     ) : (
                       <div className="text-center p-8">
+                        <div className="w-20 h-20 bg-pink-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <svg className="w-10 h-10 text-pink-500" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M8 5v14l11-7z"/>
+                          </svg>
+                        </div>
                         <p className="text-white text-lg">{reel.content}</p>
                         <p className="text-gray-400 mt-2">@{reel.user.username}</p>
                       </div>
                     )}
+                    
+                    {/* Tap to play indicator */}
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-0 hover:opacity-100 transition-opacity">
+                      <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
+                        <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M8 5v14l11-7z"/>
+                        </svg>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Overlay Actions */}
@@ -113,20 +133,25 @@ export default function Reels() {
                     <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/90 via-black/60 to-transparent">
                       <div className="flex items-end gap-3">
                         <div className="flex-1">
-                          <p className="font-semibold text-white">@{reel.user.username}</p>
-                          <p className="text-sm text-gray-300 mt-1">{reel.content}</p>
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="w-8 h-8 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                              {(reel.user.displayName || reel.user.username || 'U').charAt(0).toUpperCase()}
+                            </div>
+                            <p className="font-semibold text-white">@{reel.user.username}</p>
+                          </div>
+                          <p className="text-sm text-gray-300 line-clamp-2">{reel.content}</p>
                         </div>
                       </div>
                     </div>
 
                     {/* Right side actions */}
-                    <div className="absolute right-3 bottom-20 flex flex-col items-center gap-5 pointer-events-auto">
+                    <div className="absolute right-3 bottom-20 flex flex-col items-center gap-6 pointer-events-auto">
                       <button 
                         onClick={() => handleLike(reel.id)}
                         className="flex flex-col items-center"
                       >
-                        <div className={`w-12 h-12 rounded-full flex items-center justify-center ${liked[reel.id] ? 'bg-pink-500' : 'bg-gray-700'}`}>
-                          <svg className={`w-6 h-6 ${liked[reel.id] ? 'fill-white' : 'fill-none stroke-white'}`} viewBox="0 0 24 24">
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center ${likedReels[reel.id] ? 'bg-pink-500' : 'bg-gray-700'}`}>
+                          <svg className={`w-6 h-6 ${likedReels[reel.id] ? 'fill-white' : 'fill-none stroke-white'}`} viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                           </svg>
                         </div>
@@ -139,7 +164,7 @@ export default function Reels() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                           </svg>
                         </div>
-                        <span className="text-xs text-white mt-1">{reel.comments || 0}</span>
+                        <span className="text-xs text-white mt-1">Comment</span>
                       </button>
 
                       <button className="flex flex-col items-center">
