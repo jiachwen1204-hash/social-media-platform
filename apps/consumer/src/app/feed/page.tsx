@@ -214,11 +214,22 @@ export default function Feed() {
       return;
     }
     
-    // Add comment locally (would call API in production)
-    const newComments = { ...comments };
-    if (!newComments[postId]) newComments[postId] = [];
-    newComments[postId].push({ username: 'You', content });
-    setComments(newComments);
+    try {
+      const res = await fetch('/api/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ postId, content })
+      });
+      if (res.ok) {
+        const comment = await res.json();
+        const newComments = { ...comments };
+        if (!newComments[postId]) newComments[postId] = [];
+        newComments[postId].push(comment);
+        setComments(newComments);
+      }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const handleLogout = () => {
@@ -289,7 +300,12 @@ export default function Feed() {
                     <p className="text-sm text-gray-500">{(post.user?.username || '@user')} · {new Date(post.createdAt).toLocaleDateString()}</p>
                   </div>
                 </div>
-                <p className="text-gray-700 text-lg mb-4">{post.content}</p>
+                <p className="text-gray-700 text-lg mb-3">{post.content}</p>
+                {post.imageUrl && (
+                  <div className="mb-3 rounded-xl overflow-hidden">
+                    <img src={post.imageUrl} alt="Post media" className="w-full max-h-80 object-cover" />
+                  </div>
+                )}
                 <div className="flex items-center pt-3 border-t border-gray-100">
                   <button 
                     onClick={() => handleLike(post.id)}
