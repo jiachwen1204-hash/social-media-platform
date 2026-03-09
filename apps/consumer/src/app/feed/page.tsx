@@ -17,9 +17,9 @@ function PostSkeleton() {
         <div className="h-4 bg-gray-200 rounded w-full"></div>
         <div className="h-4 bg-gray-200 rounded w-3/4"></div>
       </div>
-      <div className="flex items-center pt-3 border-t border-gray-100 mt-4">
+      <div className="flex items-center pt-3 border-t border-gray-100 mt-4 space-x-6">
         <div className="h-8 w-8 bg-gray-200 rounded-full"></div>
-        <div className="ml-6 h-8 w-8 bg-gray-200 rounded-full"></div>
+        <div className="h-8 w-8 bg-gray-200 rounded-full"></div>
       </div>
     </div>
   );
@@ -64,11 +64,81 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
   );
 }
 
+// Comment component
+function CommentSection({ postId, comments, onAddComment }: { postId: string; comments: any[]; onAddComment: (postId: string, comment: string) => void }) {
+  const [showComments, setShowComments] = useState(false);
+  const [newComment, setNewComment] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!newComment.trim()) return;
+    setSubmitting(true);
+    await onAddComment(postId, newComment);
+    setNewComment('');
+    setSubmitting(false);
+  };
+
+  if (!showComments) {
+    return (
+      <button 
+        onClick={() => setShowComments(true)}
+        className="flex items-center space-x-1 text-gray-500 hover:text-indigo-500 transition mt-2"
+      >
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+        </svg>
+        <span>Comment</span>
+      </button>
+    );
+  }
+
+  return (
+    <div className="mt-3 pt-3 border-t border-gray-100">
+      {comments.length > 0 && (
+        <div className="space-y-2 mb-3">
+          {comments.map((c: any, i: number) => (
+            <div key={i} className="bg-gray-50 rounded-lg p-2 text-sm">
+              <span className="font-medium text-gray-900">{c.username}: </span>
+              <span className="text-gray-700">{c.content}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="flex gap-2">
+        <input 
+          type="text"
+          value={newComment}
+          onChange={(e) => setNewComment(e.target.value)}
+          placeholder="Write a comment..."
+          className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+        />
+        <button 
+          onClick={handleSubmit}
+          disabled={submitting || !newComment.trim()}
+          className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition disabled:opacity-50"
+        >
+          {submitting ? '...' : 'Post'}
+        </button>
+        <button 
+          onClick={() => setShowComments(false)}
+          className="px-3 py-2 text-gray-500 hover:text-gray-700 text-sm"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function Feed() {
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [newPost, setNewPost] = useState('');
+  const [likedPosts, setLikedPosts] = useState<Record<string, boolean>>({});
+  const [likeCounts, setLikeCounts] = useState<Record<string, number>>({});
+  const [comments, setComments] = useState<Record<string, any[]>>({});
 
   const fetchPosts = async () => {
     setLoading(true);
@@ -78,6 +148,10 @@ export default function Feed() {
       if (!res.ok) throw new Error('Failed to load posts');
       const data = await res.json();
       setPosts(Array.isArray(data) ? data : []);
+      // Initialize like counts
+      const counts: Record<string, number> = {};
+      (data || []).forEach((p: any) => { counts[p.id] = p.likes || 0; });
+      setLikeCounts(counts);
     } catch (err) {
       setError('Unable to load posts. Please try again.');
     } finally {
@@ -107,10 +181,41 @@ export default function Feed() {
         const post = await res.json();
         setPosts([post, ...posts]);
         setNewPost('');
+        setLikeCounts({ ...likeCounts, [post.id]: 0 });
       }
     } catch (err) {
       console.error(err);
     }
+  };
+
+  const handleLike = (postId: string) => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      window.location.href = '/login';
+      return;
+    }
+    
+    // Toggle like locally
+    const newLiked = !likedPosts[postId];
+    setLikedPosts({ ...likedPosts, [postId]: newLiked });
+    setLikeCounts({ 
+      ...likeCounts, 
+      [postId]: newLiked ? (likeCounts[postId] || 0) + 1 : Math.max(0, (likeCounts[postId] || 0) - 1)
+    });
+  };
+
+  const handleAddComment = async (postId: string, content: string) => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      window.location.href = '/login';
+      return;
+    }
+    
+    // Add comment locally (in real app, would call API)
+    const newComments = { ...comments };
+    if (!newComments[postId]) newComments[postId] = [];
+    newComments[postId].push({ username: 'You', content });
+    setComments(newComments);
   };
 
   const handleLogout = () => {
@@ -183,14 +288,20 @@ export default function Feed() {
                 </div>
                 <p className="text-gray-700 text-lg mb-4">{post.content}</p>
                 <div className="flex items-center pt-3 border-t border-gray-100">
-                  <button className="flex items-center space-x-1 text-gray-500 hover:text-rose-500 transition">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
-                    <span>0</span>
+                  <button 
+                    onClick={() => handleLike(post.id)}
+                    className={`flex items-center space-x-1 transition ${likedPosts[post.id] ? 'text-rose-500' : 'text-gray-500 hover:text-rose-500'}`}
+                  >
+                    <svg className="w-5 h-5" fill={likedPosts[post.id] ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                    </svg>
+                    <span>{likeCounts[post.id] || 0}</span>
                   </button>
-                  <button className="flex items-center space-x-1 text-gray-500 hover:text-indigo-500 ml-6 transition">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
-                    <span>0</span>
-                  </button>
+                  <CommentSection 
+                    postId={post.id} 
+                    comments={comments[post.id] || []} 
+                    onAddComment={handleAddComment}
+                  />
                 </div>
               </div>
             ))}
