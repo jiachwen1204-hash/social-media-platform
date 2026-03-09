@@ -2,18 +2,91 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 
+// Loading skeleton component
+function PostSkeleton() {
+  return (
+    <div className="bg-white rounded-2xl shadow-sm p-5 animate-pulse">
+      <div className="flex items-center mb-3">
+        <div className="w-12 h-12 bg-gray-200 rounded-full"></div>
+        <div className="ml-3">
+          <div className="h-4 bg-gray-200 rounded w-24 mb-1"></div>
+          <div className="h-3 bg-gray-200 rounded w-16"></div>
+        </div>
+      </div>
+      <div className="space-y-2">
+        <div className="h-4 bg-gray-200 rounded w-full"></div>
+        <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+      </div>
+      <div className="flex items-center pt-3 border-t border-gray-100 mt-4">
+        <div className="h-8 w-8 bg-gray-200 rounded-full"></div>
+        <div className="ml-6 h-8 w-8 bg-gray-200 rounded-full"></div>
+      </div>
+    </div>
+  );
+}
+
+// Empty state component
+function EmptyState() {
+  return (
+    <div className="text-center py-12">
+      <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+        <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
+        </svg>
+      </div>
+      <h3 className="text-lg font-semibold text-gray-900 mb-2">No posts yet</h3>
+      <p className="text-gray-500 mb-4">Be the first to share something!</p>
+      <Link href="/create" className="inline-block bg-indigo-600 text-white px-6 py-2 rounded-xl font-semibold hover:bg-indigo-700 transition">
+        Create Post
+      </Link>
+    </div>
+  );
+}
+
+// Error state component
+function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div className="text-center py-12">
+      <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+        <svg className="w-10 h-10 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+      </div>
+      <h3 className="text-lg font-semibold text-gray-900 mb-2">Something went wrong</h3>
+      <p className="text-gray-500 mb-4">{message}</p>
+      <button 
+        onClick={onRetry}
+        className="inline-block bg-indigo-600 text-white px-6 py-2 rounded-xl font-semibold hover:bg-indigo-700 transition"
+      >
+        Try Again
+      </button>
+    </div>
+  );
+}
+
 export default function Feed() {
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [newPost, setNewPost] = useState('');
 
+  const fetchPosts = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/posts');
+      if (!res.ok) throw new Error('Failed to load posts');
+      const data = await res.json();
+      setPosts(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setError('Unable to load posts. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    fetch('/api/posts')
-      .then(res => res.json())
-      .then(data => setPosts(Array.isArray(data) ? data : []))
-      .catch(err => setError(err.message))
-      .finally(() => setLoading(false));
+    fetchPosts();
   }, []);
 
   const handlePost = async () => {
@@ -72,27 +145,33 @@ export default function Feed() {
             value={newPost}
             onChange={(e) => setNewPost(e.target.value)}
           />
-          <div className="flex justify-end mt-3 pt-3 border-t border-gray-100">
-            <button onClick={handlePost} className="bg-indigo-600 text-white px-6 py-2 rounded-xl font-semibold hover:bg-indigo-700 transition">
+          <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-100">
+            <span className="text-sm text-gray-400">{newPost.length}/500</span>
+            <button 
+              onClick={handlePost} 
+              disabled={!newPost.trim()}
+              className="bg-indigo-600 text-white px-6 py-2 rounded-xl font-semibold hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               Post
             </button>
           </div>
         </div>
 
-        {/* Posts */}
+        {/* Posts - Loading State */}
         {loading ? (
-          <div className="text-center py-8">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-indigo-600 border-t-transparent"></div>
-            <p className="text-gray-500 mt-2">Loading posts...</p>
+          <div className="space-y-4">
+            <PostSkeleton />
+            <PostSkeleton />
+            <PostSkeleton />
           </div>
         ) : error ? (
-          <div className="text-center py-8 text-red-500">Error: {error}</div>
+          <ErrorState message={error} onRetry={fetchPosts} />
         ) : posts.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">No posts yet. Be the first to share!</div>
+          <EmptyState />
         ) : (
           <div className="space-y-4">
             {posts.map((post: any) => (
-              <div key={post.id} className="bg-white rounded-2xl shadow-sm p-5">
+              <div key={post.id} className="bg-white rounded-2xl shadow-sm p-5 hover:shadow-md transition-shadow">
                 <div className="flex items-center mb-3">
                   <div className="w-12 h-12 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-lg">
                     {(post.user?.displayName || post.user?.username || 'U').charAt(0).toUpperCase()}

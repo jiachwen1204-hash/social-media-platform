@@ -1,6 +1,54 @@
 'use client';
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
+
+// Loading skeleton component
+function UserSkeleton() {
+  return (
+    <tr className="animate-pulse">
+      <td className="px-6 py-4 whitespace-nowrap"><div className="h-4 bg-gray-600 rounded w-24"></div></td>
+      <td className="px-6 py-4 whitespace-nowrap"><div className="h-4 bg-gray-600 rounded w-32"></div></td>
+      <td className="px-6 py-4 whitespace-nowrap"><div className="h-6 bg-gray-600 rounded-full w-16"></div></td>
+      <td className="px-6 py-4 whitespace-nowrap"><div className="h-4 bg-gray-600 rounded w-20"></div></td>
+      <td className="px-6 py-4 whitespace-nowrap"><div className="h-8 bg-gray-600 rounded w-16"></div></td>
+    </tr>
+  );
+}
+
+// Empty state component
+function EmptyUsers() {
+  return (
+    <tr>
+      <td colSpan={5} className="px-6 py-12 text-center">
+        <div className="text-gray-400 mb-2">
+          <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+          </svg>
+        </div>
+        <p className="text-gray-400">No users found</p>
+      </td>
+    </tr>
+  );
+}
+
+// Error state component
+function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div className="col-span-full text-center py-12">
+      <div className="text-red-400 mb-4">
+        <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+      </div>
+      <p className="text-gray-400 mb-4">{message}</p>
+      <button 
+        onClick={onRetry}
+        className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+      >
+        Try Again
+      </button>
+    </div>
+  );
+}
 
 export default function Dashboard() {
   const [loading, setLoading] = useState(true);
@@ -8,6 +56,7 @@ export default function Dashboard() {
   const [users, setUsers] = useState<any[]>([]);
   const [posts, setPosts] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'posts'>('overview');
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -19,31 +68,27 @@ export default function Dashboard() {
   }, []);
 
   const fetchData = async (token: string) => {
+    setLoading(true);
+    setError(null);
     try {
       const headers = { 'Authorization': `Bearer ${token}` };
       
-      // Fetch stats
       const statsRes = await fetch('https://consumer-jet.vercel.app/api/admin/stats', { headers });
-      if (statsRes.ok) {
-        const statsData = await statsRes.json();
-        setStats(statsData);
-      }
+      if (!statsRes.ok) throw new Error('Failed to load stats');
+      const statsData = await statsRes.json();
+      setStats(statsData);
 
-      // Fetch users
       const usersRes = await fetch('https://consumer-jet.vercel.app/api/admin/users', { headers });
-      if (usersRes.ok) {
-        const usersData = await usersRes.json();
-        setUsers(usersData);
-      }
+      if (!usersRes.ok) throw new Error('Failed to load users');
+      const usersData = await usersRes.json();
+      setUsers(usersData);
 
-      // Fetch posts
       const postsRes = await fetch('https://consumer-jet.vercel.app/api/admin/posts', { headers });
-      if (postsRes.ok) {
-        const postsData = await postsRes.json();
-        setPosts(postsData);
-      }
-    } catch (err) {
-      console.error('Fetch error:', err);
+      if (!postsRes.ok) throw new Error('Failed to load posts');
+      const postsData = await postsRes.json();
+      setPosts(postsData);
+    } catch (err: any) {
+      setError(err.message || 'An error occurred');
     } finally {
       setLoading(false);
     }
@@ -82,7 +127,10 @@ export default function Dashboard() {
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-indigo-500 border-t-transparent"></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-indigo-500 border-t-transparent mx-auto mb-4"></div>
+          <p className="text-slate-400">Loading...</p>
+        </div>
       </div>
     );
   }
@@ -117,6 +165,9 @@ export default function Dashboard() {
               </div>
             </div>
             <div className="flex items-center space-x-4">
+              <button onClick={() => fetchData(localStorage.getItem('token') || '')} className="text-slate-300 hover:text-white text-sm">
+                Refresh
+              </button>
               <button onClick={handleLogout} className="text-slate-300 hover:text-white text-sm">
                 Sign Out
               </button>
@@ -124,6 +175,16 @@ export default function Dashboard() {
           </div>
         </div>
       </nav>
+
+      {/* Error Banner */}
+      {error && (
+        <div className="bg-red-600/20 border-b border-red-600 px-6 py-3 flex items-center justify-between">
+          <p className="text-red-400">{error}</p>
+          <button onClick={() => fetchData(localStorage.getItem('token') || '')} className="text-white text-sm hover:underline">
+            Retry
+          </button>
+        </div>
+      )}
 
       {/* Content */}
       <main className="max-w-7xl mx-auto px-6 py-8">
@@ -167,20 +228,30 @@ export default function Dashboard() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-700">
-                    {users.slice(0, 5).map((user: any) => (
-                      <tr key={user.id} className="hover:bg-slate-700/30">
-                        <td className="px-6 py-4 whitespace-nowrap text-white">{user.displayName || user.username}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-slate-300">{user.email}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 py-1 rounded-full text-xs ${user.role === 'ADMIN' ? 'bg-indigo-600/20 text-indigo-400' : user.role === 'BANNED' ? 'bg-red-600/20 text-red-400' : 'bg-green-600/20 text-green-400'}`}>
-                            {user.role || 'USER'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-slate-400 text-sm">
-                          {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '-'}
-                        </td>
-                      </tr>
-                    ))}
+                    {loading ? (
+                      <>
+                        <UserSkeleton />
+                        <UserSkeleton />
+                        <UserSkeleton />
+                      </>
+                    ) : users.length === 0 ? (
+                      <tr><td colSpan={4} className="px-6 py-12 text-center text-gray-400">No users</td></tr>
+                    ) : (
+                      users.slice(0, 5).map((user: any) => (
+                        <tr key={user.id} className="hover:bg-slate-700/30">
+                          <td className="px-6 py-4 whitespace-nowrap text-white">{user.displayName || user.username}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-slate-300">{user.email}</td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`px-2 py-1 rounded-full text-xs ${user.role === 'ADMIN' ? 'bg-indigo-600/20 text-indigo-400' : user.role === 'BANNED' ? 'bg-red-600/20 text-red-400' : 'bg-green-600/20 text-green-400'}`}>
+                              {user.role || 'USER'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-slate-400 text-sm">
+                            {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '-'}
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -190,8 +261,9 @@ export default function Dashboard() {
 
         {activeTab === 'users' && (
           <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-700">
+            <div className="px-6 py-4 border-b border-slate-700 flex justify-between items-center">
               <h2 className="text-lg font-semibold text-white">User Management</h2>
+              <span className="text-sm text-slate-400">{users.length} users</span>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -205,28 +277,38 @@ export default function Dashboard() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-700">
-                  {users.map((user: any) => (
-                    <tr key={user.id} className="hover:bg-slate-700/30">
-                      <td className="px-6 py-4 whitespace-nowrap text-white">{user.displayName || user.username}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-slate-300">{user.email}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 rounded-full text-xs ${user.role === 'ADMIN' ? 'bg-indigo-600/20 text-indigo-400' : user.role === 'BANNED' ? 'bg-red-600/20 text-red-400' : 'bg-green-600/20 text-green-400'}`}>
-                          {user.role || 'USER'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-slate-400 text-sm">
-                        {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '-'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <button
-                          onClick={() => handleBanUser(user.id, user.role)}
-                          className={`px-3 py-1 rounded-lg text-sm ${user.role === 'BANNED' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'} text-white`}
-                        >
-                          {user.role === 'BANNED' ? 'Unban' : 'Ban'}
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {loading ? (
+                    <>
+                      <UserSkeleton />
+                      <UserSkeleton />
+                      <UserSkeleton />
+                    </>
+                  ) : users.length === 0 ? (
+                    <EmptyUsers />
+                  ) : (
+                    users.map((user: any) => (
+                      <tr key={user.id} className="hover:bg-slate-700/30">
+                        <td className="px-6 py-4 whitespace-nowrap text-white">{user.displayName || user.username}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-slate-300">{user.email}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 py-1 rounded-full text-xs ${user.role === 'ADMIN' ? 'bg-indigo-600/20 text-indigo-400' : user.role === 'BANNED' ? 'bg-red-600/20 text-red-400' : 'bg-green-600/20 text-green-400'}`}>
+                            {user.role || 'USER'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-slate-400 text-sm">
+                          {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '-'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <button
+                            onClick={() => handleBanUser(user.id, user.role)}
+                            className={`px-3 py-1 rounded-lg text-sm ${user.role === 'BANNED' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'} text-white`}
+                          >
+                            {user.role === 'BANNED' ? 'Unban' : 'Ban'}
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -235,40 +317,47 @@ export default function Dashboard() {
 
         {activeTab === 'posts' && (
           <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-700">
+            <div className="px-6 py-4 border-b border-slate-700 flex justify-between items-center">
               <h2 className="text-lg font-semibold text-white">Content Moderation</h2>
+              <span className="text-sm text-slate-400">{posts.length} posts</span>
             </div>
             <div className="divide-y divide-slate-700">
-              {posts.map((post: any) => (
-                <div key={post.id} className="p-6 hover:bg-slate-700/30">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <span className="text-white font-medium">{post.user?.displayName || post.user?.username || 'User'}</span>
-                        <span className={`px-2 py-0.5 rounded-full text-xs ${post.user?.role === 'ADMIN' ? 'bg-indigo-600/20 text-indigo-400' : post.user?.role === 'BANNED' ? 'bg-red-600/20 text-red-400' : 'bg-green-600/20 text-green-400'}`}>
-                          {post.user?.role || 'USER'}
-                        </span>
-                        <span className="text-slate-500 text-sm">@{post.user?.username}</span>
-                        <span className="text-slate-500 text-sm">· {post.createdAt ? new Date(post.createdAt).toLocaleDateString() : '-'}</span>
+              {loading ? (
+                <div className="p-6"><div className="h-20 bg-slate-700/50 rounded"></div></div>
+              ) : posts.length === 0 ? (
+                <div className="p-12 text-center text-gray-400">No posts found</div>
+              ) : (
+                posts.map((post: any) => (
+                  <div key={post.id} className="p-6 hover:bg-slate-700/30">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <span className="text-white font-medium">{post.user?.displayName || post.user?.username || 'User'}</span>
+                          <span className={`px-2 py-0.5 rounded-full text-xs ${post.user?.role === 'ADMIN' ? 'bg-indigo-600/20 text-indigo-400' : post.user?.role === 'BANNED' ? 'bg-red-600/20 text-red-400' : 'bg-green-600/20 text-green-400'}`}>
+                            {post.user?.role || 'USER'}
+                          </span>
+                          <span className="text-slate-500 text-sm">@{post.user?.username}</span>
+                          <span className="text-slate-500 text-sm">· {post.createdAt ? new Date(post.createdAt).toLocaleDateString() : '-'}</span>
+                        </div>
+                        <p className="text-slate-200">{post.content}</p>
                       </div>
-                      <p className="text-slate-200">{post.content}</p>
-                    </div>
-                    <div className="flex items-center space-x-2 ml-4">
-                      <span className={`px-2 py-1 rounded text-xs ${post.published ? 'bg-green-600/20 text-green-400' : 'bg-yellow-600/20 text-yellow-400'}`}>
-                        {post.published ? 'Published' : 'Draft'}
-                      </span>
-                      <button
-                        onClick={() => handleDeletePost(post.id)}
-                        className="p-2 text-red-400 hover:text-red-300 hover:bg-red-600/20 rounded-lg"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
+                      <div className="flex items-center space-x-2 ml-4">
+                        <span className={`px-2 py-1 rounded text-xs ${post.published ? 'bg-green-600/20 text-green-400' : 'bg-yellow-600/20 text-yellow-400'}`}>
+                          {post.published ? 'Published' : 'Draft'}
+                        </span>
+                        <button
+                          onClick={() => handleDeletePost(post.id)}
+                          className="p-2 text-red-400 hover:text-red-300 hover:bg-red-600/20 rounded-lg"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
         )}
