@@ -23,21 +23,21 @@ export default function Dashboard() {
       const headers = { 'Authorization': `Bearer ${token}` };
       
       // Fetch stats
-      const statsRes = await fetch('/api/admin/stats', { headers });
+      const statsRes = await fetch('https://consumer-jet.vercel.app/api/admin/stats', { headers });
       if (statsRes.ok) {
         const statsData = await statsRes.json();
         setStats(statsData);
       }
 
       // Fetch users
-      const usersRes = await fetch('/api/admin/users', { headers });
+      const usersRes = await fetch('https://consumer-jet.vercel.app/api/admin/users', { headers });
       if (usersRes.ok) {
         const usersData = await usersRes.json();
         setUsers(usersData);
       }
 
       // Fetch posts
-      const postsRes = await fetch('/api/admin/posts', { headers });
+      const postsRes = await fetch('https://consumer-jet.vercel.app/api/admin/posts', { headers });
       if (postsRes.ok) {
         const postsData = await postsRes.json();
         setPosts(postsData);
@@ -54,7 +54,7 @@ export default function Dashboard() {
     if (!token) return;
     
     const newRole = currentRole === 'BANNED' ? 'USER' : 'BANNED';
-    await fetch('/api/admin/users', {
+    await fetch('https://consumer-jet.vercel.app/api/admin/users', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify({ targetUserId: userId, role: newRole })
@@ -66,7 +66,7 @@ export default function Dashboard() {
     const token = localStorage.getItem('token');
     if (!token) return;
     
-    await fetch('/api/admin/posts', {
+    await fetch('https://consumer-jet.vercel.app/api/admin/posts', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify({ postId })
