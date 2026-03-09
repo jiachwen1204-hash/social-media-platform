@@ -18,10 +18,16 @@ function getUserId(request: NextRequest): string | null {
   try {
     const token = auth.replace('Bearer ', '');
     const parts = token.split('.');
-    if (parts.length === 2) {
-      const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
-      return payload.userId;
+    // Handle both JWT (3 parts) and simple token (1 part base64)
+    let payload;
+    if (parts.length === 1) {
+      payload = JSON.parse(Buffer.from(token, 'base64').toString());
+    } else if (parts.length === 2) {
+      payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+    } else if (parts.length === 3) {
+      payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
     }
+    return payload?.userId || null;
   } catch (e) {}
   return null;
 }

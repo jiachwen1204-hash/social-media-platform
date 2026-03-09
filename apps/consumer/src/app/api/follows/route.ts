@@ -18,19 +18,30 @@ function getUserId(request: NextRequest): string | null {
   try {
     const token = auth.replace('Bearer ', '');
     const parts = token.split('.');
-    if (parts.length === 2) {
-      const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
-      return payload.userId;
+    // Handle both JWT (3 parts) and simple token (1 part base64)
+    let payload;
+    if (parts.length === 1) {
+      // Simple token - just decode the whole thing
+      payload = JSON.parse(Buffer.from(token, 'base64').toString());
+    } else if (parts.length === 2) {
+      // Our simple JWT format
+      payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+    } else if (parts.length === 3) {
+      // Standard JWT
+      payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
     }
-  } catch (e) {}
+    return payload?.userId || null;
+  } catch (e) {
+    console.error('Token parse error:', e);
+  }
   return null;
 }
 
 // Create follows table if not exists
 async function ensureFollowsTable() {
   await sql`CREATE TABLE IF NOT EXISTS follows (
-    follower_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    following_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    follower_id TEXT REFERENCES users(id) ON DELETE CASCADE,
+    following_id TEXT REFERENCES users(id) ON DELETE CASCADE,
     created_at TIMESTAMP DEFAULT NOW(),
     PRIMARY KEY (follower_id, following_id)
   )`;
@@ -38,9 +49,14 @@ async function ensureFollowsTable() {
 
 // POST /api/follows - Follow a user
 export async function POST(request: NextRequest) {
+  const auth = request.headers.get('Authorization');
+  console.log('Auth header:', auth);
+  
   const userId = getUserId(request);
+  console.log('UserId:', userId);
+  
   if (!userId) {
-    return corsResponse({ message: 'Unauthorized' }, 401);
+    return corsResponse({ message: 'Unauthorized', debug: auth }, 401);
   }
   
   try {

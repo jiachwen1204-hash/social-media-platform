@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
     const userId = getUserIdFromToken(request.headers.get('authorization'));
     
     const posts = await sql`
-      SELECT p.id, p.content, p.published, p."createdAt", p."updatedAt",
+      SELECT p.id, p.content, p.images, p.published, p."createdAt", p."updatedAt",
              u.id as user_id, u.username, u."displayName"
       FROM posts p
       JOIN users u ON p."userId" = u.id
